@@ -1,0 +1,1 @@
+D:\Thesis SP Online\SharePoint-BankSystem\BankSystem.Provisioning\BankSystem.Provisioning\bin\Debug\BankSystem.Provisioning.exe.config
