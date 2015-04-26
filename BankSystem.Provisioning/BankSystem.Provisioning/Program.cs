@@ -10,6 +10,40 @@ namespace BankSystem.Provisioning
     {
         static void Main(string[] args)
         {
+            CreateLists();
+
+            CreateContentTypes();
+
+            CreateFields();
+
+            CreateNavigation();
+
+            CustomizeSite();
+        }
+
+        private static void CustomizeSite()
+        {
+            throw new NotImplementedException();
+        }
+
+        private static void CreateNavigation()
+        {
+            throw new NotImplementedException();
+        }
+
+        private static void CreateFields()
+        {
+            throw new NotImplementedException();
+        }
+
+        private static void CreateContentTypes()
+        {
+            throw new NotImplementedException();
+        }
+
+        private static void CreateLists()
+        {
+            throw new NotImplementedException();
         }
     }
 }
