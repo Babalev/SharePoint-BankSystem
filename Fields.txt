@@ -1,0 +1,17 @@
+Тitle - text field formed by client name and date
+Параметри за клиента - фирма/клиент 
+(тип доход, размер на дохода, местоположение)
+Client name - text field
+Тип на кредита - 
+Вид на плащане
+лихва
+
+Client personal number - 10 digit field
+Date of request - date time
+Credit size - double
+Credit period - number of month
+Monthly tax - double
+Лихвен процент
+Валута на кредита
+
+всички предефинирани полета - taxonomy 
