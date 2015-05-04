@@ -43,6 +43,13 @@ namespace BankSystem.Provisioning
 
         private static void CreateLists()
         {
+            //Credit requests for client
+
+            //Approved client requests
+
+            //Credit requests for company
+
+            //Approved company requests
             throw new NotImplementedException();
         }
     }
