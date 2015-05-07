@@ -1,1 +1,7 @@
 D:\Thesis SP Online\SharePoint-BankSystem\BankSystem.Provisioning\BankSystem.Provisioning\bin\Debug\BankSystem.Provisioning.exe.config
+F:\Thesis-Mastery\SharePoint-BankSystem\BankSystem.Provisioning\BankSystem.Provisioning\bin\Debug\BankSystem.Provisioning.exe.config
+F:\Thesis-Mastery\SharePoint-BankSystem\BankSystem.Provisioning\BankSystem.Provisioning\bin\Debug\BankSystem.Provisioning.exe
+F:\Thesis-Mastery\SharePoint-BankSystem\BankSystem.Provisioning\BankSystem.Provisioning\bin\Debug\BankSystem.Provisioning.pdb
+F:\Thesis-Mastery\SharePoint-BankSystem\BankSystem.Provisioning\BankSystem.Provisioning\obj\Debug\BankSystem.Provisioning.csprojResolveAssemblyReference.cache
+F:\Thesis-Mastery\SharePoint-BankSystem\BankSystem.Provisioning\BankSystem.Provisioning\obj\Debug\BankSystem.Provisioning.exe
+F:\Thesis-Mastery\SharePoint-BankSystem\BankSystem.Provisioning\BankSystem.Provisioning\obj\Debug\BankSystem.Provisioning.pdb
