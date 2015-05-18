@@ -14,8 +14,11 @@ namespace BankSystem.Provisioning
     }
     class ContentTypeNames
     {
+        public static string Clients = "Clients Content type";
+        public static string Companies = "Companies Content type";
     }
     class AdministrativeNames
     {
+        public static string columnsGroup = "Bank System Columns";
     }
 }

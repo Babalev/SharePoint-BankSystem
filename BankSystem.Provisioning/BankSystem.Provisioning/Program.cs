@@ -1,6 +1,7 @@
 ﻿
 using Microsoft.SharePoint.Client;
 using Microsoft.SharePoint.Client.Taxonomy;
+using OfficeDevPnP.Core;
 using OfficeDevPnP.Core.Entities;
 using System;
 using System.Collections.Generic;
@@ -27,6 +28,8 @@ namespace BankSystem.Provisioning
         private static List companyApprovedRequests;
 
         private static List approversList;
+
+        private static TermStore termStore;
 
         static void Main(string[] args)
         {
@@ -83,7 +86,41 @@ namespace BankSystem.Provisioning
 
         private static void CreateFields()
         {
+            ContentType clientsCT = GetContentTypeByName(ContentTypeNames.Clients);
+            ContentType companiesCT = GetContentTypeByName(ContentTypeNames.Companies);
+
+            termStore = GetTermStore();
+            TermSet currencyTermSet = termStore.GetTermSet(new Guid(ConfigurationManager.AppSettings["CurrencyTermGuid"]));
+            context.Load(currencyTermSet, t => t.Id);
+            context.ExecuteQuery();
+
+            //Common fields
+            Field currency = CreateTaxonomyField("Functional Area", "FunctionalArea", AdministrativeNames.columnsGroup, true, false, termStore, currencyTermSet);
+            AddFieldToContentType(clientsCT, currency, true, false);
+            AddFieldToContentType(companiesCT, currency, true, false);
+
+            //Client fields
+
+            //Companu fields
+
             throw new NotImplementedException();
+        }
+
+        private static TermStore GetTermStore()
+        {
+            TaxonomySession taxonomySession = TaxonomySession.GetTaxonomySession(context);
+            taxonomySession.UpdateCache();
+            termStore = taxonomySession.GetDefaultSiteCollectionTermStore();
+            context.Load(termStore,
+                termStoreArg => termStoreArg.WorkingLanguage,
+                termStoreArg => termStoreArg.Id,
+                termStoreArg => termStoreArg.Groups.Include(
+                    groupArg => groupArg.Id,
+                    groupArg => groupArg.Name
+                )
+            );
+
+            return termStore;
         }
 
         private static void CreateContentTypes()
@@ -99,22 +136,9 @@ namespace BankSystem.Provisioning
             context.Load(clientRequests);
             context.ExecuteQuery();
 
-
-            //Approved client requests
-            clientApprovedRequests = CreateSingleList("Approved Clients Requests", "Credit Requests by People that are already approved", (int)ListTemplateType.GenericList);
-            context.Load(clientApprovedRequests);
-            context.ExecuteQuery();
-
-
             //Credit requests for company
             companyRequests = CreateSingleList("Companies Requests", "Credit Requests by Companies", (int)ListTemplateType.GenericList);
             context.Load(companyRequests);
-            context.ExecuteQuery();
-
-
-            //Approved company requests
-            companyApprovedRequests = CreateSingleList("Approved Companies Requests", "Credit Requests by Companies that are already approved", (int)ListTemplateType.GenericList);
-            context.Load(companyApprovedRequests);
             context.ExecuteQuery();
 
             //Approvers list
