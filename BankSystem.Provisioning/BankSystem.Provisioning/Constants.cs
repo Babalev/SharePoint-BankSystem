@@ -11,14 +11,14 @@ namespace BankSystem.Provisioning
     }
     class ListNames
     {
-        public static string Clients = "Clients Requests";
-        public static string Companies = "Companies Requests";
+        public static string Clients = "Заявки за кредити от физически лица";
+        public static string Companies = "Заявки за кредити от юридически лица";
     }
 
     class ListDescriptions
     {
-        public static string Clients = "Credit Requests by People";
-        public static string Companies = "Credit Requests by Companies";
+        public static string Clients = "Списък със заявки за кредити от физически лица";
+        public static string Companies = "Списък със заявки за кредити от юридически лица";
     }
 
     class ContentTypeNames

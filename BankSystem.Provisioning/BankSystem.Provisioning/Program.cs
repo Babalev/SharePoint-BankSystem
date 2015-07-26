@@ -25,7 +25,7 @@ namespace BankSystem.Provisioning
 
         static void Main(string[] args)
         {
-            //Connecto to sp site
+            //Connect to sp site
             context = new ClientContext(ConfigurationManager.AppSettings["TenantUrl"]);
 
             string userName = ConfigurationManager.AppSettings["AdminUser"];
@@ -117,19 +117,21 @@ namespace BankSystem.Provisioning
 
             var clientsRequestsNode = web.Navigation.QuickLaunch.Add(new NavigationNodeCreationInformation()
             {
-                Title = "Clients Requests",
-                Url = web.ServerRelativeUrl + string.Format("/{0}/Forms/AllItems.aspx", ListNames.Clients.Replace(" ", string.Empty)),
+                Title = "Заявки от физически лица",
+                Url = web.ServerRelativeUrl + string.Format("/{0}/AllItems.aspx", ListNames.Clients.Replace(" ", string.Empty)),
                 AsLastNode = true
             });
             clientsRequestsNode.Update();
 
             var companiesRequestsNode = web.Navigation.QuickLaunch.Add(new NavigationNodeCreationInformation()
             {
-                Title = "Clients Requests",
-                Url = web.ServerRelativeUrl + string.Format("/{0}/Forms/AllItems.aspx", ListNames.Companies.Replace(" ", string.Empty)),
+                Title = "Заявки от юридически лица",
+                Url = web.ServerRelativeUrl + string.Format("/{0}/AllItems.aspx", ListNames.Companies.Replace(" ", string.Empty)),
                 AsLastNode = true
             });
             companiesRequestsNode.Update();
+
+            context.ExecuteQuery();
         }
 
         private static void CreateFields()
@@ -143,95 +145,99 @@ namespace BankSystem.Provisioning
 
 
             //Common Fields
-            Field nameField = CreateField(FieldType.Text, "Име", "Name", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field nameField = CreateField(FieldType.Text, "Име на кредитополучателя", "CMName", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, nameField, true, false);
             AddFieldToContentType(companiesCT, nameField, true, false);
 
-            Field adressField = CreateField(FieldType.Text, "Адрес", "Address", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field adressField = CreateField(FieldType.Text, "Адрес", "CMAddress", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, adressField, true, false);
             AddFieldToContentType(companiesCT, adressField, true, false);
 
-            Field creditSubTypeField = CreateField(FieldType.Text, "Пояснение на кредитния продукт", "CreditSubType", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field creditSubTypeField = CreateField(FieldType.Text, "Пояснение на кредитния продукт", "CMCreditSubType", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, creditSubTypeField, true, false);
             AddFieldToContentType(companiesCT, creditSubTypeField, true, false);
 
-            Field creditPurposeField = CreateField(FieldType.Note, "Цел на кредита", "CreditPurpose", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field creditPurposeField = CreateField(FieldType.Note, "Цел на кредита", "CMCreditPurpose", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, creditPurposeField, true, false);
             AddFieldToContentType(companiesCT, creditPurposeField, true, false);
 
-            Field creditSizeField = CreateField(FieldType.Number, "Размер на кредита", "CreditSize", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field creditSizeField = CreateField(FieldType.Number, "Размер на кредита", "CMCreditSize", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, creditSizeField, true, false);
             AddFieldToContentType(companiesCT, creditSizeField, true, false);
 
+            Field monthlyTaxSizeField = CreateField(FieldType.Number, "Месечна вноска", "CMMonthlyTax", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, monthlyTaxSizeField, true, false);
+            AddFieldToContentType(companiesCT, monthlyTaxSizeField, true, false);
+
             string[] creditCurrencyChoices = { "BGN", "EUR", "USD" };
-            Field creditCurrencyField = CreateChoiceField(FieldType.Choice, "Валута на кредита", "CreditCurrency", AdministrativeNames.ColumnsGroup, null, true, true, creditCurrencyChoices);
+            Field creditCurrencyField = CreateChoiceField(FieldType.Choice, "Валута на кредита", "CMCreditCurrency", AdministrativeNames.ColumnsGroup, null, true, true, creditCurrencyChoices);
             AddFieldToContentType(clientsCT, creditCurrencyField, true, false);
             AddFieldToContentType(companiesCT, creditCurrencyField, true, false);
 
-            Field creditDurationField = CreateField(FieldType.Number, "Срок на кредита", "CreditDuration", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field creditDurationField = CreateField(FieldType.Number, "Срок на кредита", "CMCreditDuration", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, creditDurationField, true, false);
             AddFieldToContentType(companiesCT, creditDurationField, true, false);
 
-            Field creditTermsField = CreateField(FieldType.Note, "Условия на кредита", "CreditTerms", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field creditTermsField = CreateField(FieldType.Note, "Условия на кредита", "CMCreditTerms", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, creditTermsField, true, false);
             AddFieldToContentType(companiesCT, creditTermsField, true, false);
 
-            Field creditSecurityField = CreateField(FieldType.Note, "Обезпечение на кредита", "CreditSecurity", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field creditSecurityField = CreateField(FieldType.Note, "Обезпечение на кредита", "CMCreditSecurity", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, creditSecurityField, true, false);
             AddFieldToContentType(companiesCT, creditSecurityField, true, false);
 
-            Field userPropertiesField = CreateField(FieldType.Note, "Имуществено състояние на кредитополучателя", "UserProperties", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field userPropertiesField = CreateField(FieldType.Note, "Имуществено състояние на кредитополучателя", "CMUserProperties", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, userPropertiesField, true, false);
             AddFieldToContentType(companiesCT, userPropertiesField, true, false);
 
-            Field relationshipsField = CreateField(FieldType.Note, "Взаимоотношения на клиента с банката и с други банки", "Relationships", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field relationshipsField = CreateField(FieldType.Note, "Взаимоотношения на клиента с банката и с други банки", "CMRelationships", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, relationshipsField, true, false);
             AddFieldToContentType(companiesCT, relationshipsField, true, false);
 
 
 
             //Client fields
-            Field personalNumberField = CreateField(FieldType.Text, "ЕГН", "PersonalNumber", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field personalNumberField = CreateField(FieldType.Text, "ЕГН", "CMPersonalNumber", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, personalNumberField, true, false);
 
             string[] marriedChoices = { "Женен", "Неженен" };
-            Field marriedField = CreateChoiceField(FieldType.Choice, "Семейно положение", "Married", AdministrativeNames.ColumnsGroup, null, true, true, marriedChoices);
+            Field marriedField = CreateChoiceField(FieldType.Choice, "Семейно положение", "CMMarried", AdministrativeNames.ColumnsGroup, null, true, true, marriedChoices);
             AddFieldToContentType(clientsCT, marriedField, true, false);
 
             string[] educationChoices = { "Начално", "Средно", "Средно Специално", "Висше" };
-            Field educationField = CreateChoiceField(FieldType.Text, "Образование", "Education", AdministrativeNames.ColumnsGroup, null, true, true, educationChoices);
+            Field educationField = CreateChoiceField(FieldType.Text, "Образование", "CMEducation", AdministrativeNames.ColumnsGroup, null, true, true, educationChoices);
             AddFieldToContentType(clientsCT, educationField, true, false);
 
             string[] creditTypeUserChoices = { "Потребителски кредит", "Жилищен кредит", "Ипотечен кредит", "Бърз стоков кредит" };
-            Field creditTypeUserField = CreateChoiceField(FieldType.Text, "Кредитен продукт за физически лица", "CreditTypeUser", AdministrativeNames.ColumnsGroup, null, true, true, creditTypeUserChoices);
+            Field creditTypeUserField = CreateChoiceField(FieldType.Text, "Кредитен продукт за физически лица", "CMCreditTypeUser", AdministrativeNames.ColumnsGroup, null, true, true, creditTypeUserChoices);
             AddFieldToContentType(clientsCT, creditTypeUserField, true, false);
 
-            Field userIncomeDocumentsField = CreateField(FieldType.Text, "Удостоверение за дохода на клиента", "UserIncomeDocuments", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field userIncomeDocumentsField = CreateField(FieldType.Text, "Удостоверение за дохода на клиента", "CMUserIncomeDocuments", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(clientsCT, userIncomeDocumentsField, true, false);
 
 
 
             //Company fields
-            Field eikField = CreateField(FieldType.Text, "ЕИК", "EIK", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field eikField = CreateField(FieldType.Text, "ЕИК", "CMEIK", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(companiesCT, eikField, true, false);
 
             string[] creditTypeCompanyChoices = { "Кредит за оборотни средства", "Инвестиционен кредит", "Ипотечен бизнес кредит", "Кредит под условиe", "Кредитни линии" };
-            Field creditTypeCompanyField = CreateChoiceField(FieldType.Choice, "Кредитен Продукт", "CreditTypeCompany", AdministrativeNames.ColumnsGroup, null, true, true, creditTypeCompanyChoices);
+            Field creditTypeCompanyField = CreateChoiceField(FieldType.Choice, "Кредитен Продукт", "CMCreditTypeCompany", AdministrativeNames.ColumnsGroup, null, true, true, creditTypeCompanyChoices);
             AddFieldToContentType(companiesCT, creditTypeCompanyField, true, false);
 
-            Field companyHistoryField = CreateField(FieldType.Note, "Цел на кредита", "CompanyHistory", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field companyHistoryField = CreateField(FieldType.Note, "Цел на кредита", "CMCompanyHistory", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(companiesCT, companyHistoryField, true, false);
 
-            Field connectedPeopleField = CreateField(FieldType.Note, "Свързани лица", "ConnectedPeople", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field connectedPeopleField = CreateField(FieldType.Note, "Свързани лица", "CMConnectedPeople", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(companiesCT, connectedPeopleField, true, false);
 
-            Field contractorsField = CreateField(FieldType.Note, "Контрагенти", "Contractors", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field contractorsField = CreateField(FieldType.Note, "Контрагенти", "CMContractors", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(companiesCT, contractorsField, true, false);
 
-            Field competitionField = CreateField(FieldType.Note, "Конкуренция", "Competition", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field competitionField = CreateField(FieldType.Note, "Конкуренция", "CMCompetition", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(companiesCT, competitionField, true, false);
 
-            Field marketTrendsField = CreateField(FieldType.Note, "Пазарни тенденции", "MarketTrends", AdministrativeNames.ColumnsGroup, null, true, true);
+            Field marketTrendsField = CreateField(FieldType.Note, "Пазарни тенденции", "CMMarketTrends", AdministrativeNames.ColumnsGroup, null, true, true);
             AddFieldToContentType(companiesCT, marketTrendsField, true, false);
 
         }
