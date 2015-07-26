@@ -21,15 +21,7 @@ namespace BankSystem.Provisioning
 
         private static List clientRequests;
 
-        private static List clientApprovedRequests;
-
         private static List companyRequests;
-
-        private static List companyApprovedRequests;
-
-        private static List approversList;
-
-        private static TermStore termStore;
 
         static void Main(string[] args)
         {
@@ -58,20 +50,46 @@ namespace BankSystem.Provisioning
 
             CreateLists();
 
-            //CreateContentTypes();
+            CreateContentTypes();
 
-            //CreateFields();
+            CreateFields();
 
-            //AddContetTypesToLists();
+            AddContetTypesToLists();
 
-            //CreateNavigation();
+            CreateNavigation();
 
             //CustomizeSite();
+
+            CreateApproversGroups();
+
+        }
+
+        private static void CreateApproversGroups()
+        {
+            GroupCreationInformation clientsApproversGroupInfo = new GroupCreationInformation()
+            {
+                Description = "Clients Credits Approvers group",
+                Title = "Clients Credits Approvers"
+            };
+
+            GroupCreationInformation companiesApproversGroupInfo = new GroupCreationInformation()
+            {
+                Description = "Companies Credits Approvers group",
+                Title = "Companies Credits Approvers"
+            };
+
+            web.SiteGroups.Add(clientsApproversGroupInfo);
+            web.SiteGroups.Add(companiesApproversGroupInfo);
+            context.ExecuteQuery();
         }
 
         private static void AddContetTypesToLists()
         {
-            throw new NotImplementedException();
+            AddContentTypeToList(GetContentTypeByName(ContentTypeNames.Clients), clientRequests, false);
+            SetDefaultContentTypeToList(clientRequests, GetContentTypeByName(ContentTypeNames.Clients).Id.ToString());
+
+            AddContentTypeToList(GetContentTypeByName(ContentTypeNames.Companies), companyRequests, false);
+            SetDefaultContentTypeToList(companyRequests, GetContentTypeByName(ContentTypeNames.Companies).Id.ToString());
         }
 
         private static void CustomizeSite()
@@ -81,7 +99,37 @@ namespace BankSystem.Provisioning
 
         private static void CreateNavigation()
         {
-            throw new NotImplementedException();
+            context.Load(web.Navigation.QuickLaunch);
+            context.Load(web, w => w.ServerRelativeUrl);
+            context.ExecuteQuery();
+            web.DeleteAllQuickLaunchNodes();
+            web.Update();
+            context.ExecuteQuery();
+
+
+            var homeNode = web.Navigation.QuickLaunch.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "Начало",
+                Url = "",
+                AsLastNode = true
+            });
+            homeNode.Update();
+
+            var clientsRequestsNode = web.Navigation.QuickLaunch.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "Clients Requests",
+                Url = web.ServerRelativeUrl + string.Format("/{0}/Forms/AllItems.aspx", ListNames.Clients.Replace(" ", string.Empty)),
+                AsLastNode = true
+            });
+            clientsRequestsNode.Update();
+
+            var companiesRequestsNode = web.Navigation.QuickLaunch.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "Clients Requests",
+                Url = web.ServerRelativeUrl + string.Format("/{0}/Forms/AllItems.aspx", ListNames.Companies.Replace(" ", string.Empty)),
+                AsLastNode = true
+            });
+            companiesRequestsNode.Update();
         }
 
         private static void CreateFields()
@@ -89,61 +137,136 @@ namespace BankSystem.Provisioning
             ContentType clientsCT = GetContentTypeByName(ContentTypeNames.Clients);
             ContentType companiesCT = GetContentTypeByName(ContentTypeNames.Companies);
 
-            termStore = GetTermStore();
-            TermSet currencyTermSet = termStore.GetTermSet(new Guid(ConfigurationManager.AppSettings["CurrencyTermGuid"]));
-            context.Load(currencyTermSet, t => t.Id);
-            context.ExecuteQuery();
+            KeyValuePair<string, string> singleUserMode = new KeyValuePair<string, string>("UserSelectionMode", "0");
+            KeyValuePair<string, string> peopleAndGroupsMode = new KeyValuePair<string, string>("UserSelectionMode", "1");
+            KeyValuePair<string, string> dateOnlyFormat = new KeyValuePair<string, string>("Format", "DateOnly");
 
-            //Common fields
-            Field currency = CreateTaxonomyField("Functional Area", "FunctionalArea", AdministrativeNames.columnsGroup, true, false, termStore, currencyTermSet);
-            AddFieldToContentType(clientsCT, currency, true, false);
-            AddFieldToContentType(companiesCT, currency, true, false);
+
+            //Common Fields
+            Field nameField = CreateField(FieldType.Text, "Име", "Name", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, nameField, true, false);
+            AddFieldToContentType(companiesCT, nameField, true, false);
+
+            Field adressField = CreateField(FieldType.Text, "Адрес", "Address", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, adressField, true, false);
+            AddFieldToContentType(companiesCT, adressField, true, false);
+
+            Field creditSubTypeField = CreateField(FieldType.Text, "Пояснение на кредитния продукт", "CreditSubType", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, creditSubTypeField, true, false);
+            AddFieldToContentType(companiesCT, creditSubTypeField, true, false);
+
+            Field creditPurposeField = CreateField(FieldType.Note, "Цел на кредита", "CreditPurpose", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, creditPurposeField, true, false);
+            AddFieldToContentType(companiesCT, creditPurposeField, true, false);
+
+            Field creditSizeField = CreateField(FieldType.Number, "Размер на кредита", "CreditSize", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, creditSizeField, true, false);
+            AddFieldToContentType(companiesCT, creditSizeField, true, false);
+
+            string[] creditCurrencyChoices = { "BGN", "EUR", "USD" };
+            Field creditCurrencyField = CreateChoiceField(FieldType.Choice, "Валута на кредита", "CreditCurrency", AdministrativeNames.ColumnsGroup, null, true, true, creditCurrencyChoices);
+            AddFieldToContentType(clientsCT, creditCurrencyField, true, false);
+            AddFieldToContentType(companiesCT, creditCurrencyField, true, false);
+
+            Field creditDurationField = CreateField(FieldType.Number, "Срок на кредита", "CreditDuration", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, creditDurationField, true, false);
+            AddFieldToContentType(companiesCT, creditDurationField, true, false);
+
+            Field creditTermsField = CreateField(FieldType.Note, "Условия на кредита", "CreditTerms", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, creditTermsField, true, false);
+            AddFieldToContentType(companiesCT, creditTermsField, true, false);
+
+            Field creditSecurityField = CreateField(FieldType.Note, "Обезпечение на кредита", "CreditSecurity", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, creditSecurityField, true, false);
+            AddFieldToContentType(companiesCT, creditSecurityField, true, false);
+
+            Field userPropertiesField = CreateField(FieldType.Note, "Имуществено състояние на кредитополучателя", "UserProperties", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, userPropertiesField, true, false);
+            AddFieldToContentType(companiesCT, userPropertiesField, true, false);
+
+            Field relationshipsField = CreateField(FieldType.Note, "Взаимоотношения на клиента с банката и с други банки", "Relationships", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, relationshipsField, true, false);
+            AddFieldToContentType(companiesCT, relationshipsField, true, false);
+
+
 
             //Client fields
+            Field personalNumberField = CreateField(FieldType.Text, "ЕГН", "PersonalNumber", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, personalNumberField, true, false);
 
-            //Companu fields
+            string[] marriedChoices = { "Женен", "Неженен" };
+            Field marriedField = CreateChoiceField(FieldType.Choice, "Семейно положение", "Married", AdministrativeNames.ColumnsGroup, null, true, true, marriedChoices);
+            AddFieldToContentType(clientsCT, marriedField, true, false);
 
-            throw new NotImplementedException();
-        }
+            string[] educationChoices = { "Начално", "Средно", "Средно Специално", "Висше" };
+            Field educationField = CreateChoiceField(FieldType.Text, "Образование", "Education", AdministrativeNames.ColumnsGroup, null, true, true, educationChoices);
+            AddFieldToContentType(clientsCT, educationField, true, false);
 
-        private static TermStore GetTermStore()
-        {
-            TaxonomySession taxonomySession = TaxonomySession.GetTaxonomySession(context);
-            taxonomySession.UpdateCache();
-            termStore = taxonomySession.GetDefaultSiteCollectionTermStore();
-            context.Load(termStore,
-                termStoreArg => termStoreArg.WorkingLanguage,
-                termStoreArg => termStoreArg.Id,
-                termStoreArg => termStoreArg.Groups.Include(
-                    groupArg => groupArg.Id,
-                    groupArg => groupArg.Name
-                )
-            );
+            string[] creditTypeUserChoices = { "Потребителски кредит", "Жилищен кредит", "Ипотечен кредит", "Бърз стоков кредит" };
+            Field creditTypeUserField = CreateChoiceField(FieldType.Text, "Кредитен продукт за физически лица", "CreditTypeUser", AdministrativeNames.ColumnsGroup, null, true, true, creditTypeUserChoices);
+            AddFieldToContentType(clientsCT, creditTypeUserField, true, false);
 
-            return termStore;
+            Field userIncomeDocumentsField = CreateField(FieldType.Text, "Удостоверение за дохода на клиента", "UserIncomeDocuments", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(clientsCT, userIncomeDocumentsField, true, false);
+
+
+
+            //Company fields
+            Field eikField = CreateField(FieldType.Text, "ЕИК", "EIK", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(companiesCT, eikField, true, false);
+
+            string[] creditTypeCompanyChoices = { "Кредит за оборотни средства", "Инвестиционен кредит", "Ипотечен бизнес кредит", "Кредит под условиe", "Кредитни линии" };
+            Field creditTypeCompanyField = CreateChoiceField(FieldType.Choice, "Кредитен Продукт", "CreditTypeCompany", AdministrativeNames.ColumnsGroup, null, true, true, creditTypeCompanyChoices);
+            AddFieldToContentType(companiesCT, creditTypeCompanyField, true, false);
+
+            Field companyHistoryField = CreateField(FieldType.Note, "Цел на кредита", "CompanyHistory", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(companiesCT, companyHistoryField, true, false);
+
+            Field connectedPeopleField = CreateField(FieldType.Note, "Свързани лица", "ConnectedPeople", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(companiesCT, connectedPeopleField, true, false);
+
+            Field contractorsField = CreateField(FieldType.Note, "Контрагенти", "Contractors", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(companiesCT, contractorsField, true, false);
+
+            Field competitionField = CreateField(FieldType.Note, "Конкуренция", "Competition", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(companiesCT, competitionField, true, false);
+
+            Field marketTrendsField = CreateField(FieldType.Note, "Пазарни тенденции", "MarketTrends", AdministrativeNames.ColumnsGroup, null, true, true);
+            AddFieldToContentType(companiesCT, marketTrendsField, true, false);
+
         }
 
         private static void CreateContentTypes()
         {
-            throw new NotImplementedException();
+            ContentTypeCollection ContentTypesCollection = web.ContentTypes;
+
+            ContentType itemCT = ContentTypesCollection.GetById(AdministrativeStrings.ItemContentTypeId);
+
+            //Create clients credits CT 
+            CreateSingleContentType(ContentTypeNames.Clients,
+                                    ContentTypeDescriptions.Clients,
+                                    AdministrativeNames.CoontentTypesGroup,
+                                    itemCT, ContentTypesCollection);
+
+            //Create companies credits CT 
+            CreateSingleContentType(ContentTypeNames.Companies,
+                                    ContentTypeDescriptions.Companies,
+                                    AdministrativeNames.CoontentTypesGroup,
+                                    itemCT, ContentTypesCollection);
+
         }
 
         private static void CreateLists()
         {
-            
+
             //Credit requests for client
-            clientRequests = CreateSingleList("Clients Requests", "Credit Requests by People", (int)ListTemplateType.GenericList);
+            clientRequests = CreateSingleList(ListNames.Clients, ListDescriptions.Clients, (int)ListTemplateType.GenericList);
             context.Load(clientRequests);
             context.ExecuteQuery();
 
             //Credit requests for company
-            companyRequests = CreateSingleList("Companies Requests", "Credit Requests by Companies", (int)ListTemplateType.GenericList);
+            companyRequests = CreateSingleList(ListNames.Companies, ListDescriptions.Companies, (int)ListTemplateType.GenericList);
             context.Load(companyRequests);
-            context.ExecuteQuery();
-
-            //Approvers list
-            approversList = CreateSingleList("Approvers", "Credit Requests Approvers", (int)ListTemplateType.GenericList);
-            context.Load(approversList);
             context.ExecuteQuery();
         }
 
@@ -253,40 +376,6 @@ namespace BankSystem.Provisioning
             field = web.CreateField(fieldCi);
             context.Load(field);
             return field;
-        }
-
-        private static Field CreateTaxonomyField(string displayName, string internalName, string fieldGroup, bool addToDefaultView, bool required, TermStore termStore, TermSet termSet)
-        {
-            Field field = null;
-            if (web.FieldExistsByName(internalName))
-            {
-                field = web.Fields.GetByInternalNameOrTitle(internalName);
-                field.DeleteObject();
-                context.ExecuteQuery();
-            }
-            TaxonomyFieldCreationInformation fieldCi = new TaxonomyFieldCreationInformation()
-            {
-                DisplayName = displayName,
-                InternalName = internalName,
-                AddToDefaultView = addToDefaultView,
-                TaxonomyItem = termSet,
-                Required = required,
-                Id = Guid.NewGuid(),
-                Group = fieldGroup
-            };
-
-            field = web.CreateTaxonomyField(fieldCi);
-            context.Load(field);
-
-            // set the SSP ID and Term Set ID on the taxonomy field
-            var taxField = web.Context.CastTo<TaxonomyField>(field);
-            taxField.SspId = termStore.Id;
-            taxField.TermSetId = termSet.Id;
-            taxField.Update();
-            web.Context.ExecuteQuery();
-
-
-            return taxField;
         }
 
         private static Field CreateChoiceField(FieldType fType, string displayName, string internalName, string fieldGroup, IEnumerable<KeyValuePair<string, string>> additionalAttributes, bool addToDefaultView, bool required, string[] choices)

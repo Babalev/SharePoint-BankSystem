@@ -1,0 +1,889 @@
+
+using Microsoft.SharePoint.Client;
+using Microsoft.SharePoint.Client.Taxonomy;
+using OfficeDevPnP.Core.Entities;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using System.Security;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SPSProvisioningConsole
+{
+    class Program
+    {
+        private static Web web;
+
+        private static ClientContext context;
+
+        private static List xFunctionalList;
+
+        private static List bssList;
+
+        private static List KnowledgeAssetsList;
+
+        private static List NotificationsList;
+
+        private static List ApprovalList;
+
+        private static List BSSApprovalList;
+
+        private static List QuickNewsList;
+
+        private static List BSSMeetingsList;
+
+        private static List DiscussionsList;
+
+        private static List SupportingDocumentsList;
+
+        private static List ReportsList;
+
+        private static List TemplatesList;
+
+        static void Main(string[] args)
+        {
+            context = new ClientContext(ConfigurationManager.AppSettings["TenantUrl"]);
+
+            string userName = ConfigurationManager.AppSettings["AdminUser"];
+
+            SecureString passWord = new SecureString();
+
+            foreach (char c in ConfigurationManager.AppSettings["Password"].ToCharArray())
+            {
+                passWord.AppendChar(c);
+            }
+            context.Credentials = new SharePointOnlineCredentials(userName, passWord);
+
+            web = context.Web;
+
+            context.Load(web);
+
+            context.ExecuteQuery();
+
+            //Create Folders and upload js files and pages
+            Console.WriteLine("Uploading files and folders...");
+            CreateFoldersAndFiles();
+            Console.WriteLine("Done \n");
+
+            //Creating lists
+            #region Lists
+            Console.WriteLine("Creating lists...");
+            CreateLists();
+            Console.WriteLine("Done \n");
+            #endregion
+
+            //Creating content types
+            #region Content types
+            Console.WriteLine("Creating content types...");
+            CreateContentTypes();
+            Console.WriteLine("Done \n");
+            #endregion
+
+            //Creating fields
+            #region Fields
+            Console.WriteLine("Creating fields...");
+            CraeteFields();
+            Console.WriteLine("Done \n");
+            #endregion
+
+            //Add Content Types to lists
+            #region CT's to Lists
+            Console.WriteLine("Adding content types to lists...");
+            AddContentTypesToLists();
+            Console.WriteLine("Done \n");
+            #endregion
+
+            //Create Left Navigation
+            Console.WriteLine("Creating navigation...");
+            CreateNavigation();
+            Console.WriteLine("Done \n");
+
+            //Create SP Groups
+            //Console.WriteLine("Creating SP Groups...");
+            //CreateSPGroups();
+            //Console.WriteLine("Done \n");
+        }
+
+        private static void CreateSPGroups()
+        {
+            throw new NotImplementedException();
+        }
+
+        private static void CreateFoldersAndFiles()
+        {
+
+            List masterPagesList = web.GetCatalog((int)ListTemplateType.MasterPageCatalog);
+            context.Load(masterPagesList);
+            context.ExecuteQuery();
+
+            Folder spsFolder = masterPagesList.RootFolder.Folders.Add("SPS");
+            spsFolder.Update();
+            context.ExecuteQuery();
+
+            FileCreationInformation spsJSFile = new FileCreationInformation();
+            spsJSFile.Content = System.IO.File.ReadAllBytes(@"..\..\Files\sps.js");
+            spsJSFile.Url = "sps.js";
+            spsJSFile.Overwrite = true;
+            spsFolder.Files.Add(spsJSFile);
+            context.ExecuteQuery();
+
+            FileCreationInformation jqueryFile = new FileCreationInformation();
+            jqueryFile.Content = System.IO.File.ReadAllBytes(@"..\..\Files\jquery-1.8.2.js");
+            jqueryFile.Url = "jquery-1.8.2.js";
+            jqueryFile.Overwrite = true;
+            spsFolder.Files.Add(jqueryFile);
+            context.ExecuteQuery();
+
+            List pageLibrary = web.Lists.GetByTitle("Site Pages");
+            context.Load(pageLibrary, p => p.RootFolder);
+            context.ExecuteQuery();
+
+            //FileCreationInformation homePage = new FileCreationInformation();
+            //homePage.Content = System.IO.File.ReadAllBytes(@"..\..\Files\Home.aspx");
+            //homePage.Url = "Home.aspx";
+            //homePage.Overwrite = true;
+            //pageLibrary.RootFolder.Files.Add(homePage);
+            //context.ExecuteQuery();
+
+            FileCreationInformation aboutPage = new FileCreationInformation();
+            aboutPage.Content = System.IO.File.ReadAllBytes(@"..\..\Files\About.aspx");
+            aboutPage.Url = "About.aspx";
+            aboutPage.Overwrite = true;
+            pageLibrary.RootFolder.Files.Add(aboutPage);
+            context.ExecuteQuery();
+
+            FileCreationInformation customSearchPage = new FileCreationInformation();
+            customSearchPage.Content = System.IO.File.ReadAllBytes(@"..\..\Files\Search.aspx");
+            customSearchPage.Url = "Search.aspx";
+            customSearchPage.Overwrite = true;
+            pageLibrary.RootFolder.Files.Add(customSearchPage);
+            context.ExecuteQuery();
+
+            FileCreationInformation resultsPage = new FileCreationInformation();
+            resultsPage.Content = System.IO.File.ReadAllBytes(@"..\..\Files\Results.aspx");
+            resultsPage.Url = "Results.aspx";
+            resultsPage.Overwrite = true;
+            pageLibrary.RootFolder.Files.Add(resultsPage);
+            context.ExecuteQuery();
+
+            List siteAssetsCatalog = web.Lists.GetByTitle("Site Assets");
+            FileCreationInformation searchPicture = new FileCreationInformation();
+            searchPicture.Content = System.IO.File.ReadAllBytes(@"..\..\Files\Search.png");
+            searchPicture.Url = "Search.png";
+            searchPicture.Overwrite = true;
+            siteAssetsCatalog.RootFolder.Files.Add(searchPicture);
+            context.ExecuteQuery();
+
+            FileCreationInformation stylesFile = new FileCreationInformation();
+            stylesFile.Content = System.IO.File.ReadAllBytes(@"..\..\Files\spsStyles.css");
+            stylesFile.Url = "spsStyles.css";
+            stylesFile.Overwrite = true;
+            siteAssetsCatalog.RootFolder.Files.Add(stylesFile);
+            context.ExecuteQuery();
+        }
+
+        private static void CreateNavigation()
+        {
+            context.Load(web.Navigation.QuickLaunch);
+            context.Load(web, w => w.ServerRelativeUrl);
+            context.ExecuteQuery();
+            web.DeleteAllQuickLaunchNodes();
+            web.Update();
+            context.ExecuteQuery();
+
+
+            var homeNode = web.Navigation.QuickLaunch.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "Home",
+                Url = "",
+                AsLastNode = true
+            });
+            homeNode.Children.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "About",
+                Url = web.ServerRelativeUrl + "/SitePages/About.aspx",
+                AsLastNode = true
+            });
+            homeNode.Children.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "Templates",
+                Url = web.ServerRelativeUrl + string.Format("/{0}/Forms/AllItems.aspx", Constants.TemplatesListName.Replace(" ", string.Empty)),
+                AsLastNode = true
+            });
+            homeNode.Children.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "Quick News",
+                Url = web.ServerRelativeUrl + string.Format("/{0}/AllItems.aspx", Constants.QuickNewsListName.Replace(" ", string.Empty)),
+                AsLastNode = true
+            });
+            homeNode.Children.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "Advanced Search",
+                Url = web.ServerRelativeUrl + "/SitePages/Search.aspx",
+                AsLastNode = true
+            });
+            homeNode.Update();
+
+
+            var librariesNode = web.Navigation.QuickLaunch.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "Libraries",
+                AsLastNode = true
+            });
+            librariesNode.Children.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "BSS Successful Practices",
+                Url = web.ServerRelativeUrl + string.Format("/{0}/Forms/AllItems.aspx", Constants.BSSListName.Replace(" ", string.Empty)),
+                AsLastNode = true
+            });
+            librariesNode.Children.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "X-Functional Successful Practices",
+                Url = web.ServerRelativeUrl + string.Format("/{0}/Forms/AllItems.aspx", Constants.XFunctionalListName.Replace(" ", string.Empty)),
+                AsLastNode = true
+            });
+            librariesNode.Update();
+
+            var knowledgeAssetsNode = web.Navigation.QuickLaunch.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "Knowledge Assets",
+                Url = web.ServerRelativeUrl + string.Format("/{0}/Forms/AllItems.aspx", Constants.KnowledgeAssetsListName.Replace(" ", string.Empty)),
+                AsLastNode = true
+            });
+            knowledgeAssetsNode.Update();
+
+            var reportsNode = web.Navigation.QuickLaunch.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "Reports",
+                Url = web.ServerRelativeUrl + string.Format("/{0}/Forms/AllItems.aspx", Constants.ReportsListName.Replace(" ", string.Empty)),
+                AsLastNode = true
+            });
+            reportsNode.Update();
+
+            var discussionsNode = web.Navigation.QuickLaunch.Add(new NavigationNodeCreationInformation()
+            {
+                Title = "Discussions",
+                Url = web.ServerRelativeUrl + string.Format("/{0}/AllItems.aspx", Constants.DiscussionsListName.Replace(" ", string.Empty)),
+                AsLastNode = true
+            });
+            discussionsNode.Update();
+            
+            context.ExecuteQuery();
+
+        }
+
+        private static void CraeteFields()
+        {
+            ContentType successfulPracticeCT = GetContentTypeByName(Constants.SuccessfulPracticesCtName);
+            ContentType lessonsLearnedCT = GetContentTypeByName(Constants.LessonsLearnedCtName);
+            ContentType quickWinCT = GetContentTypeByName(Constants.QuickWinCtName);
+            ContentType notificationsCT = GetContentTypeByName(Constants.NotificationsCtName);
+            ContentType approvalCT = GetContentTypeByName(Constants.ApprovalCtName);
+            ContentType bssApprovalCT = GetContentTypeByName(Constants.BSSApprovalCtName);
+            ContentType toolsAndManualsCT = GetContentTypeByName(Constants.ToolsAndManualsCt);
+
+            KeyValuePair<string, string> singleUserMode = new KeyValuePair<string, string>("UserSelectionMode", "0");
+            KeyValuePair<string, string> peopleAndGroupsMode = new KeyValuePair<string, string>("UserSelectionMode", "1");
+            KeyValuePair<string, string> dateOnlyFormat = new KeyValuePair<string, string>("Format", "DateOnly");
+
+            TaxonomySession taxonomySession = TaxonomySession.GetTaxonomySession(context);
+            taxonomySession.UpdateCache();
+            TermStore termStore = taxonomySession.GetDefaultSiteCollectionTermStore();
+            context.Load(termStore,
+                termStoreArg => termStoreArg.WorkingLanguage,
+                termStoreArg => termStoreArg.Id,
+                termStoreArg => termStoreArg.Groups.Include(
+                    groupArg => groupArg.Id,
+                    groupArg => groupArg.Name
+                )
+            );
+            TermSet countryTermSet = termStore.GetTermSet(new Guid(ConfigurationManager.AppSettings["Country"]));
+            TermSet practiceCategoryTermSet = termStore.GetTermSet(new Guid(ConfigurationManager.AppSettings["PracticeCategory"]));
+            TermSet functionalAreaTermSet = termStore.GetTermSet(new Guid(ConfigurationManager.AppSettings["FunctionalArea"]));
+
+            context.Load(countryTermSet, t => t.Id);
+            context.Load(practiceCategoryTermSet, t => t.Id);
+            context.Load(functionalAreaTermSet, t => t.Id);
+            context.ExecuteQuery();
+
+            Field country = CreateTaxonomyField("Origin", "Origin", "Source of the Practice (country, group)", Constants.ColumnsGroup, true, false, termStore, countryTermSet);
+            AddFieldToContentType(successfulPracticeCT, country, true, false);
+            AddFieldToContentType(lessonsLearnedCT, country, true, false);
+            AddFieldToContentType(quickWinCT, country, true, false);
+            AddFieldToContentType(toolsAndManualsCT, country, true, false);
+
+            Field practiceOwner = CreateField(FieldType.User, "Owned By", "OwnedBy", "Actual creator/innovator/owner of the practice", Constants.ColumnsGroup, null, true, true);
+            AddFieldToContentType(successfulPracticeCT, practiceOwner, true, false);
+            AddFieldToContentType(lessonsLearnedCT, practiceOwner, true, false);
+            AddFieldToContentType(quickWinCT, practiceOwner, true, false);
+            AddFieldToContentType(toolsAndManualsCT, practiceOwner, true, false);
+
+            string[] speedToBenefitChoices = { "<3 months", "3-6 months", "6 months" };
+            Field speedToBenefit = CreateChoiceField(FieldType.MultiChoice, "Speed to Benefit", "SpeedToBenefit", "Expected time to feel the benefits", Constants.ColumnsGroup, null, true, true, speedToBenefitChoices);
+            AddFieldToContentType(successfulPracticeCT, speedToBenefit, true, false);
+            AddFieldToContentType(lessonsLearnedCT, speedToBenefit, true, false);
+            AddFieldToContentType(toolsAndManualsCT, speedToBenefit, true, false);
+
+            Field publishedDate = CreateField(FieldType.DateTime, "Published Date", "DatePublished", "The Date of approval", Constants.ColumnsGroup, new List<KeyValuePair<string, string>> { dateOnlyFormat }, false, false);
+            publishedDate.SetShowInNewForm(false);
+            publishedDate.SetShowInEditForm(false);
+            publishedDate.Update();
+            AddFieldToContentType(successfulPracticeCT, publishedDate, false, false);
+            AddFieldToContentType(lessonsLearnedCT, publishedDate, false, false);
+            AddFieldToContentType(quickWinCT, publishedDate, false, false);
+            AddFieldToContentType(toolsAndManualsCT, publishedDate, false, false);
+
+            string[] complexityFieldChoices = { "High", "Medium", "Low" };
+            Field complexityField = CreateChoiceField(FieldType.MultiChoice, "Complexity", "Complexity", "Level of implementation complexity", Constants.ColumnsGroup, null, true, true, complexityFieldChoices);
+            AddFieldToContentType(successfulPracticeCT, complexityField, true, false);
+            AddFieldToContentType(lessonsLearnedCT, complexityField, true, false);
+            AddFieldToContentType(toolsAndManualsCT, complexityField, true, false);
+
+            Field functionalArea = CreateTaxonomyField("Functional Area", "FunctionalArea", "Function/Department", Constants.ColumnsGroup, true, false, termStore, functionalAreaTermSet);
+            AddFieldToContentType(successfulPracticeCT, functionalArea, true, false);
+            AddFieldToContentType(lessonsLearnedCT, functionalArea, true, false);
+            AddFieldToContentType(quickWinCT, functionalArea, true, false);
+            AddFieldToContentType(toolsAndManualsCT, functionalArea, true, false);
+
+            Field primaryCategory = CreateTaxonomyField("Primary Practice Category", "PrimaryPracticeCategory", "Business area the practice refers to - first choice", Constants.ColumnsGroup, true, false, termStore, practiceCategoryTermSet);
+            AddFieldToContentType(successfulPracticeCT, primaryCategory, true, false);
+            AddFieldToContentType(lessonsLearnedCT, primaryCategory, true, false);
+            AddFieldToContentType(quickWinCT, primaryCategory, true, false);
+            AddFieldToContentType(toolsAndManualsCT, primaryCategory, true, false);
+
+            Field secondaryCategory = CreateTaxonomyField("Secondary Practice Category", "SecondaryPracticeCategory", "Business area the practice also refers to (if applicable)", Constants.ColumnsGroup, true, false, termStore, practiceCategoryTermSet);
+            AddFieldToContentType(successfulPracticeCT, secondaryCategory, false, false);
+            AddFieldToContentType(lessonsLearnedCT, secondaryCategory, false, false);
+            AddFieldToContentType(quickWinCT, secondaryCategory, false, false);
+            AddFieldToContentType(toolsAndManualsCT, secondaryCategory, false, false);
+
+            string[] valueCategoryChoices = { "Community Trust", "Consumer Relevance", "Customer Preference", "Cost Leadership" };
+            Field valueCategoryfield = CreateChoiceField(FieldType.MultiChoice, "4C Pillar", "4CPillar", "One of 4Cs from CCHBC Strategic Framework", Constants.ColumnsGroup, null, true, false, valueCategoryChoices);
+            AddFieldToContentType(successfulPracticeCT, valueCategoryfield, true, false);
+            AddFieldToContentType(lessonsLearnedCT, valueCategoryfield, false, false);
+            AddFieldToContentType(quickWinCT, valueCategoryfield, true, false);
+            AddFieldToContentType(toolsAndManualsCT, valueCategoryfield, true, false);
+
+            //Adding default OOTB Version field
+            Field appendToComments = web.Fields.GetByInternalNameOrTitle("V3Comments");
+            context.Load(appendToComments);
+            appendToComments.Title = "Comments";
+            appendToComments.Description = "Any applicable additional comment";
+            appendToComments.Update();
+            context.ExecuteQuery();
+            AddFieldToContentType(successfulPracticeCT, appendToComments, false, false);
+            AddFieldToContentType(lessonsLearnedCT, appendToComments, false, false);
+            AddFieldToContentType(quickWinCT, appendToComments, false, false);
+            AddFieldToContentType(toolsAndManualsCT, appendToComments, false, false);
+
+            Field pictureUrl = CreateField(FieldType.Text, "Document Set Picture", "DocSetPicture", "Link for an alternative picture for the document set", Constants.ColumnsGroup, null, false, false);
+            AddFieldToContentType(successfulPracticeCT, pictureUrl, false, false);
+            AddFieldToContentType(lessonsLearnedCT, pictureUrl, false, false);
+            AddFieldToContentType(quickWinCT, pictureUrl, false, false);
+            AddFieldToContentType(toolsAndManualsCT, pictureUrl, false, false);
+
+            //Adding default OOTB Version field
+            Field version = web.Fields.GetByInternalNameOrTitle("Version");
+            context.Load(version);
+            AddFieldToContentType(successfulPracticeCT, version, false, false);
+            AddFieldToContentType(lessonsLearnedCT, version, false, false);
+            AddFieldToContentType(quickWinCT, version, false, false);
+            AddFieldToContentType(toolsAndManualsCT, version, false, false);
+
+            //Adding default OOTB Rating field
+            Field rating = web.Fields.GetByInternalNameOrTitle("AverageRating");
+            context.Load(rating);
+            AddFieldToContentType(successfulPracticeCT, rating, false, false);
+            AddFieldToContentType(lessonsLearnedCT, rating, false, false);
+            AddFieldToContentType(quickWinCT, rating, false, false);
+            AddFieldToContentType(toolsAndManualsCT, rating, false, false);
+
+            //fields for approval list
+            Field firstApprover = CreateField(FieldType.User, "First Approver", "FirstApprover", "", Constants.ColumnsGroup, new List<KeyValuePair<string, string>> { singleUserMode }, true, true);
+            AddFieldToContentType(approvalCT, firstApprover, true, false);
+
+            Field secondApprover = CreateField(FieldType.User, "Second Approver", "SecondApprover", "", Constants.ColumnsGroup, new List<KeyValuePair<string, string>> { singleUserMode }, true, true);
+            AddFieldToContentType(approvalCT, secondApprover, true, false);
+
+            Field thirdApprover = CreateField(FieldType.User, "Third Approver", "ThirdApprover", "", Constants.ColumnsGroup, new List<KeyValuePair<string, string>> { singleUserMode }, true, true);
+            AddFieldToContentType(approvalCT, thirdApprover, true, false);
+
+            Field hiddenFieldForPC = CreateField(FieldType.Text, "hiddenFieldForPC", "hiddenFieldForPC", "", Constants.ColumnsGroup, null, true, true);
+            hiddenFieldForPC.SetShowInNewForm(false);
+            hiddenFieldForPC.SetShowInEditForm(false);
+            hiddenFieldForPC.SetShowInDisplayForm(false);
+            hiddenFieldForPC.Update();
+            context.ExecuteQuery();
+            AddFieldToContentType(approvalCT, hiddenFieldForPC, false, false);
+            AddFieldToContentType(bssApprovalCT, hiddenFieldForPC, false, false);
+            AddFieldToContentType(successfulPracticeCT, hiddenFieldForPC, false, false);
+            AddFieldToContentType(toolsAndManualsCT, hiddenFieldForPC, false, false);
+            AddFieldToContentType(lessonsLearnedCT, hiddenFieldForPC, false, false);
+            AddFieldToContentType(quickWinCT, hiddenFieldForPC, false, false);
+
+            Field approvalCategory = CreateTaxonomyField("Approval Category", "ApprovalCategory", "", Constants.ColumnsGroup, true, false, termStore, functionalAreaTermSet);
+            AddFieldToContentType(approvalCT, approvalCategory, true, false);
+            AddFieldToContentType(bssApprovalCT, approvalCategory, true, false);
+
+            //fields for bss approval list
+            Field bssApproversGroup = CreateField(FieldType.User, "Approvers Group", "BSSApproversGroup", "", Constants.ColumnsGroup, new List<KeyValuePair<string, string>> { peopleAndGroupsMode }, true, true);
+            AddFieldToContentType(bssApprovalCT, bssApproversGroup, true, false);
+            
+
+            //Fields for notifications list
+            Field notificationReceiver = CreateField(FieldType.User, "Sent to", "NotificationSentTo", "", Constants.ColumnsGroup, new List<KeyValuePair<string, string>> { singleUserMode }, false, false);
+            AddFieldToContentType(notificationsCT, notificationReceiver, true, false);
+
+            Field notificationText = CreateField(FieldType.Text, "Message", "NotificationMessage", "", Constants.ColumnsGroup, null, false, false);
+            AddFieldToContentType(notificationsCT, notificationText, true, false);
+
+            Field notificationTriesCounter = CreateField(FieldType.Number, "Retries", "NotificationRetries", "", Constants.ColumnsGroup, null, false, false);
+            AddFieldToContentType(notificationsCT, notificationTriesCounter, true, false);
+
+            Field notificationStatus = CreateField(FieldType.Text, "Status", "NotificationStatus", "", Constants.ColumnsGroup, null, false, false);
+            AddFieldToContentType(notificationsCT, notificationStatus, true, false);
+
+        }
+
+        private static void AddFieldToContentType(ContentType contentType, Field field, bool required, bool hidden)
+        {
+            if (!contentType.IsPropertyAvailable("Id"))
+            {
+                web.Context.Load(contentType, ct => ct.Id);
+                web.Context.ExecuteQuery();
+            }
+
+            if (!field.IsPropertyAvailable("Id"))
+            {
+                web.Context.Load(field, f => f.Id);
+                web.Context.ExecuteQuery();
+            }
+
+            // Get the field if already exists in content type, else add field to content type
+            // This will help to customize (required or hidden) any pre-existing field, also to handle existing field of Parent Content type
+
+            web.Context.Load(contentType.FieldLinks);
+            web.Context.ExecuteQuery();
+
+            FieldLink flink = contentType.FieldLinks.FirstOrDefault(fld => fld.Id == field.Id);
+            if (flink == null)
+            {
+                FieldLinkCreationInformation fldInfo = new FieldLinkCreationInformation();
+                fldInfo.Field = field;
+                contentType.FieldLinks.Add(fldInfo);
+                contentType.Update(true);
+                web.Context.ExecuteQuery();
+
+                flink = contentType.FieldLinks.GetById(field.Id);
+            }
+
+            if (required || hidden)
+            {
+                // Update FieldLink
+                flink.Required = required;
+                flink.Hidden = hidden;
+                contentType.Update(true);
+                web.Context.ExecuteQuery();
+            }
+        }
+
+        private static Field CreateField(FieldType fType, string displayName, string internalName, string description, string fieldGroup, IEnumerable<KeyValuePair<string, string>> additionalAttributes, bool addToDefaultView, bool required)
+        {
+            Field field = null;
+            if (web.FieldExistsByName(internalName))
+            {
+                field = web.Fields.GetByInternalNameOrTitle(internalName);
+                field.DeleteObject();
+                context.ExecuteQuery();
+            }
+
+            FieldCreationInformation fieldCi = new FieldCreationInformation(fType)
+            {
+                DisplayName = displayName,
+                InternalName = internalName,
+                AddToDefaultView = addToDefaultView,
+                Required = required,
+                Id = Guid.NewGuid(),
+                Group = fieldGroup,
+                AdditionalAttributes = additionalAttributes
+            };
+            field = web.CreateField(fieldCi);
+            field.Description = description;
+            field.Update();
+            context.ExecuteQuery();
+            return field;
+        }
+
+        private static Field CreateTaxonomyField(string displayName, string internalName, string description, string fieldGroup, bool addToDefaultView, bool required, TermStore termStore, TermSet termSet)
+        {
+            Field field = null;
+            if (web.FieldExistsByName(internalName))
+            {
+                field = web.Fields.GetByInternalNameOrTitle(internalName);
+                field.DeleteObject();
+                context.ExecuteQuery();
+            }
+            TaxonomyFieldCreationInformation fieldCi = new TaxonomyFieldCreationInformation()
+            {
+                DisplayName = displayName,
+                InternalName = internalName,
+                AddToDefaultView = addToDefaultView,
+                TaxonomyItem = termSet,
+                Required = required,
+                Id = Guid.NewGuid(),
+                Group = fieldGroup
+            };
+
+            field = web.CreateTaxonomyField(fieldCi);
+            context.Load(field);
+
+            // set the SSP ID and Term Set ID on the taxonomy field
+            var taxField = web.Context.CastTo<TaxonomyField>(field);
+            taxField.SspId = termStore.Id;
+            taxField.TermSetId = termSet.Id;
+            taxField.Description = description;
+            taxField.Update();
+            web.Context.ExecuteQuery();
+
+
+            return taxField;
+        }
+
+        private static Field CreateChoiceField(FieldType fType, string displayName, string internalName, string description,     string fieldGroup, IEnumerable<KeyValuePair<string, string>> additionalAttributes, bool addToDefaultView, bool required, string[] choices)
+        {
+            Field field = null;
+            if (web.FieldExistsByName(internalName))
+            {
+                field = web.Fields.GetByInternalNameOrTitle(internalName);
+                field.DeleteObject();
+                context.ExecuteQuery();
+            }
+            FieldCreationInformation fieldCi = new FieldCreationInformation(FieldType.Choice)
+            {
+                DisplayName = displayName,
+                InternalName = internalName,
+                AddToDefaultView = addToDefaultView,
+                Required = required,
+                Id = Guid.NewGuid(),
+                Group = fieldGroup,
+                AdditionalAttributes = additionalAttributes,
+
+            };
+            field = web.CreateField(fieldCi);
+
+            FieldChoice fieldChoice = context.CastTo<FieldChoice>(web.Fields.GetByTitle(displayName));
+            context.Load(fieldChoice);
+            context.ExecuteQuery();
+
+            fieldChoice.Choices = choices;
+            fieldChoice.Description = description;
+            fieldChoice.Update();
+            context.Load(fieldChoice);
+            context.ExecuteQuery();
+
+            return fieldChoice;
+        }
+
+        private static void CreateLists()
+        {
+            xFunctionalList = CreateSingleList(Constants.XFunctionalListName, Constants.XFunctionalListDescription, (int)ListTemplateType.DocumentLibrary);
+            context.Load(xFunctionalList);
+            context.ExecuteQuery();
+
+            bssList = CreateSingleList(Constants.BSSListName, Constants.BSSListDescription, (int)ListTemplateType.DocumentLibrary);
+            context.Load(bssList);
+            context.ExecuteQuery();
+
+            //NotificationsList = CreateSingleList(Constants.NotificationsListName, Constants.NotificationsListDescription, (int)ListTemplateType.GenericList);
+            //context.Load(NotificationsList);
+            //context.ExecuteQuery();
+
+            ApprovalList = CreateSingleList(Constants.ApprovalListName, Constants.ApprovalListDescription, (int)ListTemplateType.GenericList);
+            context.Load(ApprovalList);
+            context.ExecuteQuery();
+
+            BSSApprovalList = CreateSingleList(Constants.BSSApprovalListName, Constants.BSSApprovalListDescription, (int)ListTemplateType.GenericList);
+            context.Load(BSSApprovalList);
+            context.ExecuteQuery();
+
+            QuickNewsList = CreateSingleList(Constants.QuickNewsListName, Constants.QuickNewsListDescription, (int)ListTemplateType.Announcements);
+            context.Load(QuickNewsList);
+            context.ExecuteQuery();
+
+            BSSMeetingsList = CreateSingleList(Constants.BSSMeetingsListName, Constants.BSSMeetingsListDescription, (int)ListTemplateType.Events);
+            context.Load(BSSMeetingsList);
+            context.ExecuteQuery();
+
+            DiscussionsList = CreateSingleList(Constants.DiscussionsListName, Constants.DiscussionsListDescription, (int)ListTemplateType.DiscussionBoard);
+            context.Load(DiscussionsList);
+            context.ExecuteQuery();
+
+            SupportingDocumentsList = CreateSingleList(Constants.SupportingDocumentsListName, Constants.SupportingDocumentsListDescription, (int)ListTemplateType.DocumentLibrary);
+            context.Load(SupportingDocumentsList);
+            context.ExecuteQuery();
+
+            ReportsList = CreateSingleList(Constants.ReportsListName, Constants.ReportsListDescription, (int)ListTemplateType.DocumentLibrary);
+            context.Load(SupportingDocumentsList);
+            context.ExecuteQuery();
+
+            TemplatesList = CreateSingleList(Constants.TemplatesListName, Constants.TemplatesListDescription, (int)ListTemplateType.DocumentLibrary);
+            context.Load(TemplatesList);
+            context.ExecuteQuery();
+
+            KnowledgeAssetsList = CreateSingleList(Constants.KnowledgeAssetsListName, Constants.KnowledgeAssetsListDescription, (int)ListTemplateType.DocumentLibrary);
+            context.Load(KnowledgeAssetsList);
+            context.ExecuteQuery();
+        }
+
+        private static List CreateSingleList(string ListTitle, string ListDescription, int ListTemplate)
+        {
+            DeleteListIfExists(ListTitle);
+
+            ListCreationInformation creationInfo = new ListCreationInformation();
+            creationInfo.Title = ListTitle;
+            creationInfo.TemplateType = ListTemplate;
+            creationInfo.Url = ListTitle.Replace(" ", string.Empty);
+
+            List list;
+            list = web.Lists.Add(creationInfo);
+            list.Description = ListDescription;
+            list.EnableFolderCreation = false;
+            list.EnableVersioning = true;
+            list.Update();
+            context.ExecuteQuery();
+
+            return list;
+        }
+
+        private static void DeleteListIfExists(string ListTitle)
+        {
+            List list = web.Lists.GetByTitle(ListTitle);
+            try
+            {
+                list.DeleteObject();
+
+                context.ExecuteQuery();
+            }
+            catch
+            { }
+        }
+
+        private static void CreateContentTypes()
+        {
+            ContentTypeCollection ContentTypesCollection = web.ContentTypes;
+
+            ContentType documentSetCT = ContentTypesCollection.GetById(Constants.DocumentSetContentTypeId);
+
+            ContentType documentCT = ContentTypesCollection.GetById(Constants.DocumentContentTypeId);
+
+            ContentType itemCT = ContentTypesCollection.GetById(Constants.ItemContentTypeId);
+
+            //Create SuccessFul practice CT 
+            CreateSingleContentType(Constants.SuccessfulPracticesCtName,
+                                    Constants.SuccessfulPracticesCtDescription,
+                                    Constants.ContentTypesGroup,
+                                    documentSetCT, ContentTypesCollection);
+
+            //Create Lesson Learned CT 
+            CreateSingleContentType(Constants.LessonsLearnedCtName,
+                                    Constants.LessonsLearnedCtDescription,
+                                    Constants.ContentTypesGroup,
+                                    documentSetCT, ContentTypesCollection);
+
+            //Create Quick Win CT 
+            CreateSingleContentType(Constants.QuickWinCtName,
+                                    Constants.QuickWinCtDescription,
+                                    Constants.ContentTypesGroup,
+                                    documentSetCT, ContentTypesCollection);
+
+            //Create Submission CT 
+            CreateSingleContentType(Constants.SubmissionCtName,
+                                    Constants.SubmissionCtDescription,
+                                    Constants.ContentTypesGroup,
+                                    documentCT, ContentTypesCollection);
+
+            //Create Business Case CT 
+            CreateSingleContentType(Constants.BusinessCaseCtName,
+                                    Constants.BusinessCaseCtDescription,
+                                    Constants.ContentTypesGroup,
+                                    documentCT, ContentTypesCollection);
+
+            //Create Supporting Document CT 
+            CreateSingleContentType(Constants.SupportingDocumentCtName,
+                                    Constants.SupportingDocumentCtDescription,
+                                    Constants.ContentTypesGroup,
+                                    documentCT, ContentTypesCollection);
+
+            //Create Notifications CT
+            CreateSingleContentType(Constants.NotificationsCtName,
+                                    Constants.NotificationsCtDescription,
+                                    Constants.ContentTypesGroup,
+                                    itemCT, ContentTypesCollection);
+
+            //Create Approval CT
+            CreateSingleContentType(Constants.ApprovalCtName,
+                                    Constants.ApprovalCtDescription,
+                                    Constants.ContentTypesGroup,
+                                    itemCT, ContentTypesCollection);
+
+            //Create BSS Approval CT
+            CreateSingleContentType(Constants.BSSApprovalCtName,
+                                    Constants.BSSApprovalCtDescription,
+                                    Constants.ContentTypesGroup,
+                                    itemCT, ContentTypesCollection);
+
+            //Create Tools & Manuals CT
+            CreateSingleContentType(Constants.ToolsAndManualsCt,
+                                    "",
+                                    Constants.ContentTypesGroup,
+                                    documentSetCT, ContentTypesCollection);
+
+            //Create Examples CT
+            CreateSingleContentType(Constants.ExamplesCt,
+                                    "",
+                                    Constants.ContentTypesGroup,
+                                    documentSetCT, ContentTypesCollection);
+
+            //Create Knowledge Materials CT
+            CreateSingleContentType(Constants.KnowledgeMaterialsCt,
+                                    "",
+                                    Constants.ContentTypesGroup,
+                                    documentSetCT, ContentTypesCollection);
+
+            //Create Benchmarks CT
+            CreateSingleContentType(Constants.BenchmarksCt,
+                                    "",
+                                    Constants.ContentTypesGroup,
+                                    documentSetCT, ContentTypesCollection);
+
+        }
+
+        private static void CreateSingleContentType(string CTName,
+                                                    string CTDescription,
+                                                    string CTGroup,
+                                                    ContentType ParrentCT,
+                                                    ContentTypeCollection cTypes)
+        {
+            DeleteCtIfExists(CTName);
+
+            ContentTypeCreationInformation ctInfo = new ContentTypeCreationInformation()
+            {
+                Name = CTName,
+                Description = CTDescription,
+                Group = CTGroup,
+                ParentContentType = ParrentCT
+            };
+
+            cTypes.Add(ctInfo);
+            context.ExecuteQuery();
+            web.Update();
+        }
+
+        private static void AddContentTypesToLists()
+        {
+            AddContentTypeToList(GetContentTypeByName(Constants.SuccessfulPracticesCtName), xFunctionalList, false);
+            AddContentTypeToList(GetContentTypeByName(Constants.SuccessfulPracticesCtName), bssList, false);
+
+            AddContentTypeToList(GetContentTypeByName(Constants.LessonsLearnedCtName), xFunctionalList, false);
+
+            AddContentTypeToList(GetContentTypeByName(Constants.QuickWinCtName), xFunctionalList, false);
+
+            AddContentTypeToList(GetContentTypeByName(Constants.SubmissionCtName), xFunctionalList, true);
+
+            AddContentTypeToList(GetContentTypeByName(Constants.BusinessCaseCtName), xFunctionalList, true);
+
+            AddContentTypeToList(GetContentTypeByName(Constants.SupportingDocumentCtName), xFunctionalList, true);
+
+            //AddContentTypeToList(GetContentTypeByName(Constants.NotificationsCtName), NotificationsList, true);
+
+            AddContentTypeToList(GetContentTypeByName(Constants.ApprovalCtName), ApprovalList, true);
+            AddContentTypeToList(GetContentTypeByName(Constants.BSSApprovalCtName), BSSApprovalList, true);
+
+            AddContentTypeToList(GetContentTypeByName(Constants.ToolsAndManualsCt), KnowledgeAssetsList, false);
+            AddContentTypeToList(GetContentTypeByName(Constants.ExamplesCt), KnowledgeAssetsList, false);
+            AddContentTypeToList(GetContentTypeByName(Constants.KnowledgeMaterialsCt), KnowledgeAssetsList, false);
+            AddContentTypeToList(GetContentTypeByName(Constants.BenchmarksCt), KnowledgeAssetsList, false);
+
+            SetDefaultContentTypeToList(KnowledgeAssetsList, GetContentTypeByName(Constants.KnowledgeMaterialsCt).Id.ToString());
+
+            SetDefaultContentTypeToList(xFunctionalList, GetContentTypeByName(Constants.SuccessfulPracticesCtName).Id.ToString());
+            SetDefaultContentTypeToList(bssList, GetContentTypeByName(Constants.SuccessfulPracticesCtName).Id.ToString());
+            //SetDefaultContentTypeToList(NotificationsList, GetContentTypeByName(Constants.NotificationsCtName).Id.ToString());
+            SetDefaultContentTypeToList(ApprovalList, GetContentTypeByName(Constants.ApprovalCtName).Id.ToString());
+            SetDefaultContentTypeToList(BSSApprovalList, GetContentTypeByName(Constants.BSSApprovalCtName).Id.ToString());
+        }
+
+        private static void AddContentTypeToList(ContentType ctInfo, List list, bool isHidden)
+        {
+            list.ContentTypesEnabled = true;
+            list.Update();
+            list.Context.ExecuteQuery();
+
+            list.ContentTypes.AddExistingContentType(ctInfo);
+            list.Context.ExecuteQuery();
+
+        }
+
+        private static void DeleteCtIfExists(string CTName)
+        {
+            ContentType ct = GetContentTypeByName(CTName);
+            if (ct != null)
+            {
+                ct.DeleteObject();
+                context.ExecuteQuery();
+                web.Update();
+            }
+        }
+
+        private static ContentType GetContentTypeByName(string contentTypeName)
+        {
+            if (string.IsNullOrEmpty(contentTypeName))
+                throw new ArgumentNullException("contentTypeName");
+
+            ContentTypeCollection ctCol;
+
+            ctCol = web.ContentTypes;
+
+            IEnumerable<ContentType> results = web.Context.LoadQuery<ContentType>(ctCol.Where(item => item.Name == contentTypeName));
+            web.Context.ExecuteQuery();
+            return results.FirstOrDefault();
+        }
+
+        public static void SetDefaultContentTypeToList(List list, string contentTypeId)
+        {
+            ContentTypeCollection ctCol = list.ContentTypes;
+            list.Context.Load(ctCol);
+            list.Context.ExecuteQuery();
+
+            var ctIds = new List<ContentTypeId>();
+            foreach (ContentType ct in ctCol)
+            {
+                if (ct.Name == Constants.BusinessCaseCtName ||
+                    ct.Name == Constants.SupportingDocumentCtName ||
+                    ct.Name == Constants.SubmissionCtName ||
+                    ct.Name == "Document" ||
+                    ct.Name == "Folder")
+                {
+                    continue;
+                }
+                ctIds.Add(ct.Id);
+            }
+
+            var newOrder = ctIds.Except(
+                // remove the folder content type
+                                    ctIds.Where(id => id.StringValue.StartsWith("0x01200"))
+                                 )
+                                 .OrderBy(x => !x.StringValue.StartsWith(contentTypeId, StringComparison.OrdinalIgnoreCase))
+                                 .ToArray();
+            list.RootFolder.UniqueContentTypeOrder = newOrder;
+
+            list.EnableFolderCreation = false;
+
+            list.RootFolder.Update();
+            list.Update();
+            list.Context.ExecuteQuery();
+        }
+    }
+}
